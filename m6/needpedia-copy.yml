@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: ${PG_USER:-needpedia}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-needpedia}
+      POSTGRES_DB: ${PG_DB:-needpedia_development}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+
+  web:
+    image: needpedia-m6:latest
+    environment:
+      RAILS_ENV: development
+      DOMAIN: ${DOMAIN}
+      DOMAIN_PROTOCOL: ${DOMAIN_PROTOCOL:-http}
+      HOSTS: ${DOMAIN}
+      DATABASE_URL: postgres://${PG_USER:-needpedia}:${PG_PASSWORD:-needpedia}@db:5432/${PG_DB:-needpedia_development}
+      REDIS_URL: redis://redis:6379/1
+      DISABLE_FIREBASE: "true"
+    ports:
+      - "127.0.0.1:${WEB_PORT}:3000"
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
+volumes:
+  db_data:
