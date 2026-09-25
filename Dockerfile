@@ -8,7 +8,6 @@ WORKDIR /app
 RUN printf '%s\n' \
       'deb http://archive.debian.org/debian bullseye main' \
       'deb http://archive.debian.org/debian bullseye-updates main' \
-      'deb http://security.debian.org/debian-security bullseye-security main' \
       > /etc/apt/sources.list \
  && rm -f /etc/apt/sources.list.d/* \
  && echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99check-valid-until
