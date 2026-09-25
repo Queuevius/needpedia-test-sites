@@ -40,7 +40,7 @@ Rails.application.configure do
   config.action_mailer.perform_caching = false
   config.action_mailer.default_url_options = {
     host: Rails.application.config.x.domain,
-    protocol: 'https'
+    protocol: Rails.application.config.x.domain_protocol
   }
   Rails.application.routes.default_url_options = config.action_mailer.default_url_options
 
