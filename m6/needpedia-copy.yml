@@ -7,10 +7,26 @@ services:
       POSTGRES_DB: ${PG_DB:-needpedia_development}
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-needpedia} -d ${PG_DB:-needpedia_development}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=${COPY_NAME}"
     restart: unless-stopped
 
   redis:
     image: redis:7
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=${COPY_NAME}"
     restart: unless-stopped
 
   web:
@@ -23,12 +39,51 @@ services:
       DATABASE_URL: postgres://${PG_USER:-needpedia}:${PG_PASSWORD:-needpedia}@db:5432/${PG_DB:-needpedia_development}
       REDIS_URL: redis://redis:6379/1
       DISABLE_FIREBASE: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:3000/ -o /dev/null || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 90s
+    labels:
+      # Sablier group assignment
+      - "sablier.enable=true"
+      - "sablier.group=${COPY_NAME}"
+
+      # Traefik routing
+      - "traefik.enable=true"
+      - "traefik.docker.allownonrunning=true"
+      - "traefik.http.routers.${COPY_NAME}.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.${COPY_NAME}.entrypoints=web"
+      - "traefik.http.routers.${COPY_NAME}.service=${COPY_NAME}"
+      - "traefik.http.routers.${COPY_NAME}.middlewares=${COPY_NAME}-sablier"
+      - "traefik.http.services.${COPY_NAME}.loadbalancer.server.port=3000"
+
+      # Sablier middleware via Traefik plugin
+      - "traefik.http.middlewares.${COPY_NAME}-sablier.plugin.sablier.group=${COPY_NAME}"
+      - "traefik.http.middlewares.${COPY_NAME}-sablier.plugin.sablier.sablierUrl=http://sablier:10000"
+      - "traefik.http.middlewares.${COPY_NAME}-sablier.plugin.sablier.sessionDuration=15m"
+      - "traefik.http.middlewares.${COPY_NAME}-sablier.plugin.sablier.dynamic.displayName=Needpedia test copy (${COPY_NAME})"
+      - "traefik.http.middlewares.${COPY_NAME}-sablier.plugin.sablier.dynamic.showDetails=true"
+      - "traefik.http.middlewares.${COPY_NAME}-sablier.plugin.sablier.dynamic.refreshFrequency=2s"
     ports:
       - "127.0.0.1:${WEB_PORT}:3000"
-    depends_on:
-      - db
-      - redis
     restart: unless-stopped
+    networks:
+      - default
+      - frontend
 
 volumes:
   db_data:
+
+networks:
+  default:
+    name: ${COPY_NAME}-net
+  frontend:
+    external: true
+    name: ${FRONTEND_NETWORK:-needpedia-front}

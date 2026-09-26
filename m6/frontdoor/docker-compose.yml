@@ -1,0 +1,34 @@
+services:
+  front:
+    image: traefik:v3.6
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--providers.docker.network=needpedia-front"
+      - "--entrypoints.web.address=:80"
+      - "--experimental.plugins.sablier.moduleName=github.com/sablierapp/sablier-traefik-plugin"
+      - "--experimental.plugins.sablier.version=v1.3.0"
+    ports:
+      - "80:80"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - front
+
+  sablier:
+    image: sablierapp/sablier:1.18.0
+    restart: unless-stopped
+    command:
+      - "start"
+      - "--provider.name=docker"
+      - "--logging.level=info"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - front
+
+networks:
+  front:
+    name: needpedia-front
