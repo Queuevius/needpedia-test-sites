@@ -113,12 +113,10 @@ Nothing else changes.
 
 ## Notes
 
-- **Databases are created automatically** on first boot. If the web
-  container starts before the database is ready, the database migration
-  is skipped once; restart the web container after the database is
-  healthy and it will finish. To restart just one copy:
-
-  docker compose -p np-john -f m6/needpedia-copy.yml restart web
+- **Databases are created automatically** on first boot. The web
+  container waits for the database to be ready, then creates and
+  migrates it before starting the site. No manual migration step is
+  needed.
 
 - **HTTPS / certificates.** This package ships the plain-HTTP front
   door so it can be tested anywhere. On a real server, add a TLS
